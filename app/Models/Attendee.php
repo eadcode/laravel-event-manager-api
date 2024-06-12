@@ -14,6 +14,7 @@ class Attendee extends Model
         'user_id',
         'event_id',
     ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

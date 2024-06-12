@@ -4,17 +4,41 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EventResource;
+use App\Http\Traits\CanLoadRelationships;
 use App\Models\Event;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class EventController extends Controller
 {
+    use CanLoadRelationships, AuthorizesRequests;
+
+    /**
+     * @param string[] $except
+     */
+    public function setExcept(array $except): void
+    {
+        $this->except = $except;
+    }
+
+    private array $relations = ['user', 'attendees', 'attendees.user'];
+
+    public function __construct()
+    {
+        $this->setExcept(['index', 'show']);
+//        $this->authorizeResource(Event::class, 'event');
+
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return EventResource::collection(Event::with('user')->get());
+        $query = $this->loadRelationships(Event::query(), $this->relations);
+
+        return EventResource::collection($query->latest()->paginate());
     }
 
     /**
@@ -29,10 +53,10 @@ class EventController extends Controller
                 'start_time' => 'required|date',
                 'end_time' => 'required|date|after:start_time',
             ]),
-            'user_id' => 1
+            'user_id' => $request->user()->id
         ]);
 
-        return new EventResource($event);
+        return new EventResource($this->loadRelationships($event));
     }
 
     /**
@@ -40,16 +64,16 @@ class EventController extends Controller
      */
     public function show(Event $event)
     {
-        $event->load('user', 'attendees');
-
-        return new EventResource($event);
+        return new EventResource($this->loadRelationships($event));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Event $event)
+    public function update(Request $request, Event $event): EventResource
     {
+        Gate::authorize('update-event', $event);
+
         $event->update(
             $request->validate([
                 'name' => 'sometimes|string|max:255',
@@ -59,7 +83,7 @@ class EventController extends Controller
             ])
         );
 
-        return new EventResource($event);
+        return new EventResource($this->loadRelationships($event));
     }
 
     /**

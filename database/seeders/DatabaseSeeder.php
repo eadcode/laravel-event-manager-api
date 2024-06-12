@@ -16,10 +16,10 @@ class DatabaseSeeder extends Seeder
     {
         User::factory(1000)->create();
 
-//        User::factory()->create([
-//            'name' => 'Test User',
-//            'email' => 'test@example.com',
-//        ]);
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@email.com',
+        ]);
 
         $this->call(EventSeeder::class);
 
